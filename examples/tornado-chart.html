@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tornado Chart Example</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --low: #f87171;
+      --high: #4ade80;
+      --center: #60a5fa;
+      --grid: #2d3a4f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+    .card {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem 2rem;
+      max-width: 720px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.8rem;
+    }
+
+    .legend span { display: flex; align-items: center; gap: 0.4rem; }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; }
+    .swatch.low { background: var(--low); }
+    .swatch.high { background: var(--high); }
+
+    .chart {
+      position: relative;
+      margin-left: 140px;
+      padding-bottom: 0.5rem;
+    }
+
+    .axis-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-left: 140px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .center-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--center);
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    .center-label {
+      position: absolute;
+      left: 50%;
+      top: -1.5rem;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      color: var(--center);
+      white-space: nowrap;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      align-items: center;
+      height: 36px;
+      margin-left: -140px;
+    }
+
+    .row-label {
+      text-align: right;
+      padding-right: 12px;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    .bars {
+      position: relative;
+      height: 22px;
+      display: flex;
+      align-items: center;
+    }
+
+    .bar {
+      position: absolute;
+      height: 18px;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .bar.low {
+      right: 50%;
+      margin-right: 1px;
+      background: linear-gradient(90deg, #dc2626, var(--low));
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .bar.high {
+      left: 50%;
+      margin-left: 1px;
+      background: linear-gradient(90deg, var(--high), #16a34a);
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    .base-value {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--grid);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .base-value strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <h1>Tornado Chart</h1>
+  <p class="subtitle">Sensitivity analysis — how each input moves NPV from the base case ($12.0M)</p>
+
+  <div class="card">
+    <div class="legend">
+      <span><i class="swatch low"></i> Low scenario (−10% input)</span>
+      <span><i class="swatch high"></i> High scenario (+10% input)</span>
+    </div>
+
+    <div class="axis-labels">
+      <span>−$3.0M</span>
+      <span>Base: $12.0M</span>
+      <span>+$3.0M</span>
+    </div>
+
+    <div class="chart" id="chart">
+      <div class="center-line" aria-hidden="true"></div>
+      <div class="center-label">Base case</div>
+    </div>
+
+    <p class="base-value">
+      Variables are sorted by <strong>total swing</strong> (largest impact at top).
+      Tornado charts are common in finance, engineering, and risk analysis.
+    </p>
+  </div>
+
+  <script>
+    // Each row: label, NPV when input is low, NPV when input is high
+  const data = [
+    { label: "Unit price",     low: 9.2,  high: 14.8 },
+    { label: "Volume",         low: 10.1, high: 13.6 },
+    { label: "Raw materials",  low: 11.0, high: 12.9 },
+    { label: "Labor cost",     low: 11.4, high: 12.5 },
+    { label: "Discount rate",  low: 11.8, high: 12.2 },
+    { label: "Capex",          low: 11.9, high: 12.1 },
+  ];
+
+  const base = 12.0;
+  const minVal = 9.0;
+  const maxVal = 15.0;
+  const chart = document.getElementById("chart");
+
+  const scale = (v) => ((v - minVal) / (maxVal - minVal)) * 100;
+  const basePct = scale(base);
+
+  data
+    .map((d) => ({ ...d, swing: Math.abs(d.high - d.low) }))
+    .sort((a, b) => b.swing - a.swing)
+    .forEach((d) => {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const lowWidth = basePct - scale(d.low);
+      const highWidth = scale(d.high) - basePct;
+
+      row.innerHTML = `
+        <div class="row-label">${d.label}</div>
+        <div class="bars">
+          <div class="bar low" style="width: ${lowWidth}%"></div>
+          <div class="bar high" style="width: ${highWidth}%"></div>
+        </div>
+      `;
+      chart.appendChild(row);
+    });
+  </script>
+</body>
+</html>
