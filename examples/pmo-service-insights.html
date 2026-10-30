@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PMO Service Insight Assessment – Interaktive Präsentation</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #1a2332;
+  --panel2: #16202e;
+  --text: #e7ecf3;
+  --muted: #8b9cb3;
+  --accent: #60a5fa;
+  --accent2: #4ade80;
+  --warn: #fbbf24;
+  --low: #f87171;
+  --grid: #2d3a4f;
+  --c0:#1e293b; --c1:#3b82f6; --c2:#22d3ee; --c3:#a78bfa; --c4:#f472b6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+}
+.slide {
+  display: none;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 3rem 4rem 5rem;
+  animation: fadeIn .3s ease;
+}
+.slide.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+h1 { font-size: 2.1rem; font-weight: 650; margin-bottom: .4rem; }
+h2 { font-size: 1.7rem; font-weight: 600; margin-bottom: 1rem; }
+h3 { font-size: 1.05rem; font-weight: 600; color: var(--accent); margin: 1.2rem 0 .5rem; }
+.subtitle { color: var(--muted); font-size: .95rem; margin-bottom: 1.4rem; }
+p { line-height: 1.6; margin-bottom: .8rem; max-width: 1100px; }
+ul { margin: 0 0 .8rem 1.3rem; line-height: 1.6; }
+li { margin-bottom: .35rem; }
+.card {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+}
+.card h3 { margin-top: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+@media (max-width: 900px) { .grid2,.grid3,.grid4 { grid-template-columns: 1fr; } .slide { padding: 1.5rem; } }
+.pill {
+  display: inline-block; padding: .15rem .6rem; border-radius: 999px;
+  font-size: .75rem; font-weight: 600; margin-right: .35rem;
+}
+.pill.strategic { background: rgba(96,165,250,.18); color: var(--accent); }
+.pill.tactical { background: rgba(167,139,250,.18); color: #a78bfa; }
+.pill.operational { background: rgba(74,222,128,.16); color: var(--accent2); }
+.pill.gray { background: rgba(139,156,179,.15); color: var(--muted); }
+.kpi { font-size: 2rem; font-weight: 700; color: var(--accent); }
+.kpi-label { font-size: .8rem; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.scrollbox { max-height: 55vh; overflow-y: auto; border-radius: 8px; }
+.heatmap-wrap { overflow-x: auto; }
+.heatmap { border-collapse: separate; border-spacing: 1px; font-size: .68rem; }
+.heatmap th { position: sticky; top: 0; background: var(--panel); z-index: 2; padding: .3rem .4rem; font-size: .62rem; white-space: nowrap; }
+.heatmap th.rowh { position: sticky; left: 0; background: var(--panel); z-index: 3; text-align: right; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heatmap td { width: 26px; height: 22px; text-align: center; border-radius: 3px; cursor: default; color: transparent; }
+.heatmap td:hover { outline: 2px solid #fff; color: #fff; z-index: 5; position: relative; }
+.heatmap td.l0 { background: #1e293b; }
+.heatmap td.l1 { background: #1d4ed8; }
+.heatmap td.l2 { background: #0891b2; }
+.heatmap td.l3 { background: #a21caf; }
+.heatmap td.l4 { background: #f472b6; color: #1a1a2e; }
+.heatmap td.l4:hover { color: #1a1a2e; }
+.legend { display: flex; gap: .9rem; align-items: center; font-size: .75rem; color: var(--muted); margin: .6rem 0 1rem; flex-wrap: wrap; }
+.swatch { width: 13px; height: 13px; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: .25rem; }
+.bar-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .28rem; font-size: .8rem; }
+.bar-label { width: 250px; text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.bar-label:hover { color: var(--accent); }
+.bar-track { flex: 1; background: var(--panel2); border-radius: 4px; height: 20px; position: relative; }
+.bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2563eb, var(--accent)); min-width: 2px; transition: width .3s; }
+.bar-val { width: 90px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: .75rem; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.ctl { font-size: .78rem; color: var(--muted); }
+.slider-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 .9rem 1rem; }
+@media (max-width: 900px) { .slider-grid { grid-template-columns: 1fr; } }
+.slider-item { background: var(--panel2); border-radius: 8px; padding: .45rem .7rem; }
+.slider-item .top { display: flex; justify-content: space-between; font-size: .76rem; margin-bottom: .15rem; }
+.slider-item .val { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn {
+  background: var(--accent); color: #0b1220; border: none; border-radius: 8px;
+  padding: .5rem 1.1rem; font-weight: 650; cursor: pointer; font-size: .85rem;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--grid); }
+#nav {
+  position: fixed; bottom: 1.1rem; right: 1.6rem; display: flex; gap: .5rem; z-index: 50;
+}
+#counter { position: fixed; bottom: 1.35rem; left: 1.6rem; color: var(--muted); font-size: .8rem; z-index: 50; }
+#hint { position: fixed; bottom: 1.35rem; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: .72rem; z-index: 50; }
+#tooltip {
+  position: fixed; pointer-events: none; background: #0b1220; border: 1px solid var(--grid);
+  border-radius: 8px; padding: .55rem .7rem; font-size: .76rem; max-width: 340px;
+  display: none; z-index: 99; box-shadow: 0 8px 24px rgba(0,0,0,.5); line-height: 1.45;
+}
+#tooltip b { color: var(--accent); }
+.footnote { font-size: .72rem; color: var(--muted); margin-top: 1rem; }
+.tag { font-size: .68rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="slides"></div>
+<div id="counter"></div>
+<div id="hint">← → oder Klick: navigieren</div>
+<div id="nav">
+  <button class="btn ghost" id="prev">← Zurück</button>
+  <button class="btn" id="next">Weiter →</button>
+</div>
+<div id="tooltip"></div>
+
+<script>
+const DATA = {"outcomes":[{"name":"Better Availability of Skilled Resources","desc":"Ensuring that the organization has access to highly skilled project and program managers to lead these initiatives effectively. This outcome is typically perceived in the medium to long term, as developing skilled resources requires consistent effort and time for training and experience to yield results.","horizon":"medium to long term"},{"name":"Better Organizational Change Management","desc":"Implementing structured organizational change management practices to ensure smooth transitions and minimize disruptions. This outcome is typically perceived in the medium to long term, as seeing the benefits of recommended services related to organizational change management takes time to materialize fully.","horizon":"medium to long term"},{"name":"Better Control Over Project Teams","desc":"Establishing clear reporting structures and accountability measures to effectively manage project teams. This outcome is typically perceived in the short to medium term. While some improvements in team control can be seen quickly with the implementation of recommended services, fully optimized team management may take several months to achieve.","horizon":"short to medium term"},{"name":"Better Definition of Roles and Responsibilities","desc":"Clearly defining roles and responsibilities to ensure that all team members understand their duties and contributions. This outcome is typically perceived in the short to medium term. While initial role definitions can be established quickly, fully embedding and optimizing these roles across the organization may take several months.","horizon":"short to medium term"},{"name":"Better Project Prioritization","desc":"Prioritizing projects based on their strategic value and impact to ensure optimal resource allocation and focus. This outcome is typically perceived in the medium term. While initial prioritization can be established relatively quickly, the full benefits of optimized project selection often become apparent over several months as projects progress.","horizon":"medium term"},{"name":"Better Quality of Project Results","desc":"Ensuring that projects deliver high-quality results that meet or exceed stakeholder expectations. This outcome is typically perceived in the medium to long term. While some quality improvements may be noticeable in the short term, consistently delivering high-quality results across multiple projects often takes time to achieve and becomes more apparent over a longer period.","horizon":"medium to long term"},{"name":"Better Talent Management","desc":"Developing and implementing strategies to attract, retain, and develop top talent in project management. This outcome is typically perceived in the medium to long term. The full benefits of attracting, developing, and retaining top talent often become apparent over a longer period.","horizon":"medium to long term"},{"name":"Effective Knowledge Transfer","desc":"Facilitating the transfer of knowledge and best practices within the organization to maintain consistency and expertise. This outcome is typically perceived in the medium term. While some knowledge transfer occurs immediately through some services provided by the PMO, the full benefits of organization-wide knowledge sharing and application usually become apparent over several months.","horizon":"medium term"},{"name":"Enhanced Decision-Making","desc":"Providing accurate, timely information to support better decision-making processes, leading to more successful project outcomes. This outcome is typically perceived in the short to medium term. While some improvements in decision-making can be seen quickly with better data and processes, the full impact on project outcomes may take several months to become apparent.","horizon":"short to medium term"},{"name":"Enhanced Project Customer Experience","desc":"Delivering projects that consistently meet or exceed customer expectations, leading to higher satisfaction and loyalty. This outcome is typically perceived in the medium term. While some improvements in project customer experience may be noticeable quickly, consistently delivering enhanced experiences across multiple projects often takes several months to achieve and become apparent.","horizon":"medium term"},{"name":"Enhanced Resource Management","desc":"Optimizing the allocation and use of resources to ensure that projects are adequately staffed and supported. This outcome is typically perceived in the medium term. While initial improvements in resource allocation can be seen quickly, the full benefits of optimized resource management across multiple projects often become apparent over several months as projects progress.","horizon":"medium term"},{"name":"Greater Alignment with Strategic Objectives","desc":"Ensuring that all projects support the organization's strategic goals, maximizing their impact and value. This outcome is typically perceived in the medium to long term. While initial alignment can be established quickly, the full benefits of strategically aligned projects often become apparent over a longer period as projects and programs deliver results that contribute to organizational objectives.","horizon":"medium to long term"},{"name":"Greater Integration Among Organizational Areas","desc":"Promoting collaboration and integration among different departments to ensure cohesive and efficient project execution. This outcome is typically perceived in the medium to long term. While initial steps towards integration can be implemented quickly, achieving meaningful and lasting integration among different organizational areas often requires time to overcome silos and establish new collaborative practices.","horizon":"medium to long term"},{"name":"Higher Return on Investment (ROI)","desc":"Maximizing the financial return on projects and programs by ensuring they deliver significant value and align with strategic goals. This outcome is typically perceived in the long term. While some improvements in project selection and execution can be seen earlier, the full financial impact and higher ROI often become apparent only after projects are completed and benefits are realized, which can take a year or more.","horizon":"long term"},{"name":"Improved Availability of Information","desc":"Providing timely and accurate project information to support decision-making processes. This outcome is typically perceived in the short to medium term. While some improvements in information availability can be seen quickly with the implementation of new systems and processes, fully optimizing information flow and utilization may take several months to achieve.","horizon":"short to medium term"},{"name":"Improved Collaboration and Communication","desc":"Enhancing communication channels and fostering collaboration to ensure all team members and stakeholders are aligned and informed. This outcome is typically perceived in the short to medium term. While some improvements in collaboration and communication can be seen quickly with new practices and tools, fully embedding a collaborative culture across the organization may take several months to achieve.","horizon":"short to medium term"},{"name":"Improved Organizational Commitment to Results","desc":"Cultivating a culture of accountability and focus on achieving project results that align with organizational goals. This outcome is typically perceived in the medium to long term. While initial steps towards improving commitment can be implemented quickly, fully embedding a results-focused culture across the organization often requires time to change mindsets and establish new practices.","horizon":"medium to long term"},{"name":"Improved Project Budget Management","desc":"Ensuring strict budget controls and financial oversight to keep projects within budget. This outcome is typically perceived in the short to medium term. While improvements in budget tracking and control can be seen quickly, the full benefits of consistently keeping projects within budget often become apparent over several months as multiple projects are completed.","horizon":"short to medium term"},{"name":"Improved Project Customer Relationship","desc":"Building and maintaining strong relationships with project customers through effective communication and meeting their expectations. This outcome is typically perceived in the medium term. While some improvements in project customer relationships can be seen quickly with better communication practices, building strong relationships often takes a history of consistent performance and engagement across multiple project touchpoints.","horizon":"medium term"},{"name":"Improved Performance Management","desc":"Monitoring and managing project and program performance to identify issues early and ensure successful delivery. This outcome is typically perceived in the short to medium term. While some improvements in performance tracking can be seen quickly, the full benefits of enhanced performance management across multiple projects often become apparent over several months as the system matures.","horizon":"short to medium term"},{"name":"Improved Success Rates","desc":"Ensuring that projects and program are completed on time, within budget, and meet their objectives, which enhances overall organizational success. This outcome is typically perceived in the medium to long term. While some improvements in project execution can be seen quickly, consistently higher success rates across multiple projects and programs often take time to achieve and become apparent, usually over a period of six months to a year or more.","horizon":"medium to long term"},{"name":"Improved Reliability of Information Provided","desc":"Ensuring that all project information is reliable, up-to-date, and accurate to support informed decision-making. This outcome is typically perceived in the short to medium term. While initial improvements in data quality can be seen quickly with new systems and processes, fully establishing a culture of reliable information across all projects may take several months to achieve and validate.","horizon":"short to medium term"},{"name":"Improved Stakeholder Engagement","desc":"Engaging stakeholders throughout project or program lifecycle to ensure their needs are met and expectations managed. This outcome is typically perceived in the short to medium term. While some improvements in stakeholder engagement can be seen quickly with new practices, building strong, consistent engagement across all stakeholder groups often takes several months to fully establish and demonstrate results.","horizon":"short to medium term"},{"name":"Increased Organizational Learning","desc":"Fostering a culture of learning and continuous improvement by capturing and sharing lessons learned. This outcome is typically perceived in the medium to long term. While initial steps towards capturing and sharing lessons can be implemented quickly, building a true culture of organizational learning and seeing its impact on project performance often takes a year or more to fully realize.","horizon":"medium to long term"},{"name":"Increased Productivity on Projects","desc":"Implementing best practices and tools to boost the productivity and efficiency of project teams. This outcome is typically perceived in the short to medium term. While some productivity improvements can be seen quickly with new tools and processes, fully optimizing team productivity across multiple projects often takes several months as teams adapt to and master new practices.","horizon":"short to medium term"},{"name":"Increased Visibility of Project Progress","desc":"Providing clear and regular updates on project progress to ensure all stakeholders are informed and aligned. This outcome is typically perceived in the short term. Improvements in project progress visibility can often be seen quickly with the implementation of new reporting processes and tools, usually within the first few weeks or months of implementation.","horizon":"short term"},{"name":"More Accurate Project Forecasting","desc":"Using reliable data and methodologies to provide accurate project forecasts and better planning. This outcome is typically perceived in the medium term. While initial improvements in forecasting can be seen relatively quickly, developing truly accurate and reliable forecasting capabilities often takes several months as historical data accumulates and forecasting models are refined based on actual project outcomes.","horizon":"medium term"},{"name":"Reduction of Risk Exposure","desc":"Implementing comprehensive risk management strategies to identify, assess, and mitigate risks. This outcome is typically perceived in the medium term. While initial risk identification and mitigation strategies can be implemented quickly, the full benefits of reduced risk exposure often become apparent over several months as projects and programs progress and potential risks are successfully managed or avoided.","horizon":"medium term"},{"name":"Stronger Governance and Compliance","desc":"Establishing and maintaining strong governance frameworks to ensure compliance with all relevant regulations and policies. This outcome is typically perceived in the medium to long term. While initial project, program and portfolio governance structures can be established quickly, fully embedding strong governance practices and demonstrating consistent compliance across the organization often takes several months to a year to achieve and validate.","horizon":"medium to long term"},{"name":"Reduction of Project Life Cycle","desc":"Streamlining project processes to reduce the time required to complete projects and deliver results faster. This outcome is typically perceived in the medium term. While some improvements in project efficiency can be seen quickly, consistently reducing project lifecycles across multiple projects often takes several months to achieve as new methodologies and practices are fully adopted and refined.","horizon":"medium term"}],"services":[{"name":"Advice to Executive Level","desc":"Providing strategic guidance and advice to senior executives on project, program, and portfolio management to ensure alignment with organizational goals and objectives.","cat":"Strategisch","domain":"Project/Program/Portfolio"},{"name":"Benefit Realization Management","desc":"Managing and measuring the realization of benefits from organization’s portfolio of projects and programs to ensure that they deliver the expected value to the organization.","cat":"Strategisch","domain":"Program/Portfolio"},{"name":"Foster Project Culture","desc":"Promoting project management culture within the organization to enhance project awareness, support, and collaboration.","cat":"Strategisch","domain":"Project/Program/Portfolio"},{"name":"Governance Oversight","desc":"Establishing and maintaining governance frameworks to ensure projects, programs, and portfolios are managed in accordance with organizational policies and standards.","cat":"Strategisch","domain":"Project/Program/Portfolio"},{"name":"Organizational Change Management","desc":"Managing the impact of organizational changes on projects and programs to ensure smooth transitions and minimize disruption.","cat":"Strategisch","domain":"Project/Program"},{"name":"Portfolio Management","desc":"Overseeing the selection, prioritization, monitoring, and overall management of projects and programs within the portfolio to ensure alignment with strategic objectives and optimal resource allocation.","cat":"Strategisch","domain":"Portfolio"},{"name":"Strategic Planning Support","desc":"Providing support for strategic planning activities to ensure projects and programs align with long-term organizational goals.","cat":"Strategisch","domain":"Portfolio"},{"name":"Knowledge Management","desc":"Capturing, organizing, and sharing project, program and portfolio management knowledge, lessons learned, and best practices to foster continuous improvement and organizational learning.","cat":"Taktisch","domain":"Project/Program/Portfolio"},{"name":"Methodologies and Frameworks Management","desc":"Developing, implementing, and maintaining standardized methodologies and frameworks to ensure consistency and quality in project, program, and portfolio management.","cat":"Taktisch","domain":"Project/Program/Portfolio"},{"name":"Resource Management","desc":"Allocating and managing resources effectively across projects to ensure optimal utilization and minimize conflicts.","cat":"Taktisch","domain":"Project"},{"name":"Systems and Tools Management","desc":"Managing and maintaining systems and tools to support effective project, program, and portfolio management.","cat":"Taktisch","domain":"Project/Program/Portfolio"},{"name":"Training and Development","desc":"Offering training and development programs to enhance the skills and competencies in project, program, and portfolio management within the organization.","cat":"Taktisch","domain":"Project/Program/Portfolio"},{"name":"Audit Assessments","desc":"Conducting thorough audits and assessments of projects to ensure compliance with standards, identify issues, and recommend improvements.","cat":"Operativ","domain":"Project"},{"name":"Change Control Management","desc":"Overseeing the change control process to manage changes in projects and programs, ensuring minimal disruption and alignment with objectives.","cat":"Operativ","domain":"Project/Program"},{"name":"Customer Relationship Management","desc":"Maintaining and enhancing relationships and interfaces with project customers to ensure their needs and expectations are met throughout the project lifecycle.","cat":"Operativ","domain":"Project"},{"name":"Data Analytics and Reporting","desc":"Providing data analytics and reporting services to monitor project performance, identify trends, and support informed decision-making.","cat":"Operativ","domain":"Project"},{"name":"Issue Management","desc":"Identifying, tracking, and managing issues that arise in projects to ensure they are resolved promptly and do not impact success.","cat":"Operativ","domain":"Project"},{"name":"Mentoring and Coaching","desc":"Providing mentoring and coaching to project and managers and project teams to enhance their skills, knowledge, and performance.","cat":"Operativ","domain":"Project"},{"name":"Performance Management","desc":"Monitoring and managing the performance of projects and programs to ensure they meet their objectives and deliver expected outputs and outcomes.","cat":"Operativ","domain":"Project/Program"},{"name":"Program Management","desc":"Managing and coordinating multiple related projects as a program to deliver benefits and achieve strategic goals.","cat":"Operativ","domain":"Program"},{"name":"Project Management","desc":"Managing and coordinating a project to deliver specific objectives within scope, time, budget, and quality constraints.","cat":"Operativ","domain":"Project"},{"name":"Project Support Services","desc":"Offering comprehensive technical support to project managers, including assistance with project planning and task coordination, while working under the guidance of the project manager.","cat":"Operativ","domain":"Project"},{"name":"Quality Assurance","desc":"Ensuring that project deliverables meet defined quality standards through systematic quality assurance processes.","cat":"Operativ","domain":"Project"},{"name":"Risk Management","desc":"Identifying, assessing, and managing risks throughout projects and programs lifecycle to minimize their impact on success.","cat":"Operativ","domain":"Project/Program"},{"name":"Specialized Services","desc":"Providing specialized services customized to meet the unique requirements of individual projects. The PMO team members possess the expertise and resources necessary to support project managers in activities where they may lack specific technical or domain knowledge.","cat":"Operativ","domain":"Project"},{"name":"Stakeholder Management","desc":"Identifying and managing stakeholder expectations and engagement to ensure their support and involvement in projects.","cat":"Operativ","domain":"Project"}],"cises":[[1,0,2,0,2,0,0,2,1,3,0,4,0,0,0,0,0,4,2,0,2,1,0,0,1,0],[2,1,3,2,4,0,2,2,2,1,0,2,0,2,0,0,2,1,1,2,0,0,0,2,0,4],[0,0,0,1,0,0,0,0,3,4,2,1,0,1,0,1,0,1,3,0,3,0,0,0,0,1],[0,0,0,4,0,0,0,0,4,2,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],[4,3,0,2,0,4,4,0,2,2,1,0,0,0,0,1,0,0,0,2,0,0,0,0,0,1],[0,0,0,0,0,0,0,2,3,0,0,0,4,2,0,0,2,0,3,0,2,0,4,2,3,0],[0,0,2,0,0,0,0,2,1,3,0,4,0,0,0,0,0,4,2,0,0,0,0,0,0,0],[0,0,2,0,0,0,0,4,3,0,2,4,0,0,0,0,0,4,0,0,1,0,0,0,0,0],[4,0,0,4,0,2,3,1,1,0,2,0,0,0,0,3,0,0,2,0,0,0,0,2,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,3,0,0,0,2,0,3,2,0,4],[0,0,0,0,0,3,0,0,1,4,2,0,0,3,0,1,0,0,3,0,2,1,0,0,2,0],[3,3,0,3,0,4,4,0,2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0],[0,0,4,0,0,1,0,0,2,0,3,0,0,0,0,0,0,0,0,2,2,0,0,0,0,4],[0,4,0,2,0,4,2,0,1,0,0,0,0,0,0,0,0,0,3,4,0,1,0,2,1,1],[2,1,0,1,0,1,0,2,1,0,4,0,0,0,0,4,0,0,2,0,0,3,0,2,0,0],[0,0,4,0,0,0,0,0,0,0,4,4,0,0,2,0,0,0,0,0,0,2,0,0,0,4],[3,4,4,2,2,4,0,0,0,0,0,2,0,0,0,0,0,2,1,2,2,0,0,0,0,0],[0,0,0,0,0,0,0,0,2,2,2,0,0,3,0,4,3,0,4,0,4,4,0,2,4,0],[0,0,2,0,0,0,0,0,0,0,0,2,0,0,4,0,3,0,3,0,2,2,2,2,2,4],[0,2,0,2,0,2,0,0,2,0,2,0,3,2,0,4,3,0,4,3,3,3,0,2,0,0],[0,0,0,2,3,0,0,3,3,2,2,2,0,3,2,2,3,2,2,4,4,2,2,4,3,2],[2,0,0,0,0,0,0,2,0,0,4,0,2,0,0,4,0,0,0,1,2,1,3,2,2,0],[0,0,0,0,3,0,0,0,0,0,0,0,0,0,4,0,0,0,0,2,2,0,0,0,0,4],[0,0,2,0,0,0,0,4,0,0,0,4,3,0,0,0,0,4,0,0,0,0,0,2,0,0],[0,0,0,0,0,0,0,2,4,4,4,2,0,0,0,0,0,0,0,2,2,3,0,0,4,0],[0,0,0,0,0,0,0,0,1,0,4,0,0,0,0,4,0,0,0,0,2,1,0,0,1,3],[0,0,0,0,0,0,0,0,3,2,2,0,0,0,0,4,0,0,0,0,0,4,0,4,4,0],[0,0,0,4,0,0,0,2,0,0,0,0,3,0,0,0,3,0,0,2,2,2,0,4,2,0],[1,1,0,4,0,1,0,0,4,0,0,0,3,3,0,0,0,0,2,0,0,0,0,2,0,0],[0,0,0,0,0,0,0,1,3,4,2,1,0,1,0,0,0,1,1,0,2,2,0,2,3,0]],"example":{"relevance":[2.1978,1.0989,3.2967,5.4945,5.4945,2.1978,1.0989,2.1978,5.4945,1.0989,3.2967,5.4945,2.1978,5.4945,5.4945,2.1978,2.1978,3.2967,1.0989,4.3956,3.2967,5.4945,2.1978,1.0989,2.1978,5.4945,4.3956,3.2967,5.4945,2.1978],"sois":[98.9011,84.6154,45.0549,148.3516,29.6703,117.5824,73.6264,76.9231,178.022,98.9011,170.3297,60.4396,62.6374,67.033,28.5714,149.4505,56.044,43.956,128.5714,102.1978,132.967,113.1868,37.3626,131.8681,102.1978,76.9231],"relative":[4.09,3.5,1.87,6.14,1.23,4.87,3.05,3.18,7.37,4.09,7.05,2.5,2.59,2.78,1.18,6.19,2.32,1.82,5.32,4.23,5.51,4.69,1.55,5.46,4.23,3.18]}};
+</script>
+
+<script>
+const { outcomes, services, cises, example } = DATA;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const slidesEl = $('#slides');
+let idx = 0;
+const slideDefs = [];
+
+function addSlide(html) { slideDefs.push(html); }
+
+function pillFor(cat) {
+  const map = { 'Strategisch': 'strategic', 'Taktisch': 'tactical', 'Operativ': 'operational' };
+  return `<span class="pill ${map[cat] || 'gray'}">${cat}</span>`;
+}
+
+const HORIZON_LABEL = {
+  'short term': 'Kurzfristig',
+  'short to medium term': 'Kurz- bis mittelfristig',
+  'medium term': 'Mittelfristig',
+  'medium to long term': 'Mittel- bis langfristig',
+  'long term': 'Langfristig'
+};
+
+addSlide(`
+  <section class="slide active">
+    <div style="max-width:900px;margin:6rem auto 0;text-align:center;">
+      <div class="pill gray" style="margin-bottom:1rem;">PMI PMO Practice Guide · Value Generating PMO Flywheel · Steps 2 &amp; 3</div>
+      <h1 style="font-size:2.8rem;">PMO Service Insight Assessment</h1>
+      <p class="subtitle" style="font-size:1.1rem;">Wie ein PMO seine Services an den Erwartungen seiner Kunden ausrichtet – interaktive Präsentation basierend auf der Assessment-Arbeitsmappe (Version 1.03, 3. Nov 2024)</p>
+      <div class="grid3" style="margin-top:3rem;text-align:left;">
+        <div class="card"><div class="kpi">30</div><div class="kpi-label">potenzielle PMO-Outcomes (Erwartungen der Kunden)</div></div>
+        <div class="card"><div class="kpi">26</div><div class="kpi-label">potenzielle PMO-Services in 3 Kategorien</div></div>
+        <div class="card"><div class="kpi">434</div><div class="kpi-label">PMO-Leader weltweit lieferten die Community-Insights (CISES)</div></div>
+      </div>
+      <p class="footnote">Quelle: PMO Service Insight Assessment V1.03 (PMI / PMOGA). Alle Inhalte © Project Management Institute – nur zur Demonstration aufbereitet.</p>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Warum dieses Assessment?</h2>
+    <p class="subtitle">Es schließt die Lücke zwischen PMO-Services und den konkreten Erwartungen der PMO-Kunden – und macht Prioritäten datenbasiert entscheidbar.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Die 7 Key Features</h3>
+        <ul>
+          <li><b>Kunden-zentriert:</b> Outcomes und Prioritäten der PMO-Kunden stehen im Mittelpunkt (Surveys, Feedback).</li>
+          <li><b>Community Insights:</b> Empfehlungen basieren auf den Erfahrungen der globalen PMO-Community.</li>
+          <li><b>Priorisierungs-Framework:</b> Services werden nach Wirkung und Relevanz bewertet – implementieren, verbessern oder zurückfahren.</li>
+          <li><b>Anpassbar:</b> Kriterien lassen sich an den eigenen organisatorischen Kontext anpassen.</li>
+          <li><b>Datenbasierte Entscheidungen:</b> strukturiertes Scoring schafft Nachvollziehbarkeit und Stakeholder-Buy-in.</li>
+          <li><b>Ganzheitliche Analyse:</b> quantitative Scores + qualitative Insights.</li>
+          <li><b>Kontinuierliche Verbesserung:</b> kein Einmal-Projekt, sondern wiederholbarer Prozess.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Der rote Faden: Vom Kunden zum Service</h3>
+        <ul>
+          <li><b>1. Wer sind die PMO-Kunden?</b> – Kunden vs. Stakeholder unterscheiden.</li>
+          <li><b>2. Welche 30 Outcomes erwarten sie?</b> – Kunden sprechen in Ergebnissen, nicht in Services.</li>
+          <li><b>3. Welche 26 Services kann ein PMO anbieten?</b> – strategisch, taktisch, operativ.</li>
+          <li><b>4. Was leistet welcher Service wirklich?</b> – CISES-Score-Datenbank aus 434 PMO-Leadern.</li>
+          <li><b>5. Sammeln:</b> Jeder Kunde rangiert seine Top-5-Outcomes (Skala 1–5).</li>
+          <li><b>6. Gewichten:</b> Einfluss der Kundengruppen auf den PMO-Erfolg (z.&nbsp;B. per AHP).</li>
+          <li><b>7. Priorisieren:</b> SOIS-Ranking zeigt, welche Services den größten Beitrag leisten.</li>
+        </ul>
+      </div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Wer ist PMO-Kunde – und wer nur Stakeholder?</h2>
+    <p class="subtitle">Alle PMO-Kunden sind Stakeholder – aber nicht alle Stakeholder sind Kunden.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>PMO-Kunden</h3>
+        <p>... erhalten und nutzen PMO-Services <b>direkt</b>. Die Beziehung ist transaktional und service-orientiert – mit konkreten Bedürfnissen, zu denen sie direktes Feedback geben können.</p>
+        <p><b>Beispiele:</b> Projektmanager:innen, Senior Executives, C-Level, Fachbereichsleiter:innen, Projektteam-Mitglieder.</p>
+      </div>
+      <div class="card">
+        <h3>Weitere PMO-Stakeholder</h3>
+        <p>... haben ein Interesse an den PMO-Aktivitäten oder sind von ihnen betroffen – nutzen die Services aber <b>nicht direkt</b>.</p>
+        <p><b>Beispiel:</b> In einer großen Handelskette mit digitaler Transformation nutzen IT-Teamleiter:innen das PMO-Mentoring (Kunden + Stakeholder). Filialleiter:innen bundesweit sind keine Kunden, aber Stakeholder – die Transformation betrifft ihren Laden maßgeblich.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Wichtig für die Analyse</h3>
+      <p>Nur wer eine <b>direkte Interaktion oder Abhängigkeit</b> von den PMO-Angeboten hat, qualifiziert sich als PMO-Kunde. Projektmanager:innen brauchen z.&nbsp;B. praktische Risikomanagement-Unterstützung, der CEO strategische Entscheidungsgrundlagen – unterschiedliche Kunden, unterschiedliche Bedürfnisse.</p>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Die 30 potenziellen PMO-Outcomes</h2>
+    <p class="subtitle">Die aktualisierte Liste aus dem PMO Value Ring Framework (PMI PMO Practice Guide) – ehemals „30 Benefits“ der PMOVR-Methodik, jetzt als „Outcomes“ neu gefasst.</p>
+    <div class="card">
+      <div class="legend">
+        <span><span class="swatch" style="background:#f87171"></span>Kurzfristig</span>
+        <span><span class="swatch" style="background:#fbbf24"></span>Kurz- bis mittelfristig</span>
+        <span><span class="swatch" style="background:#4ade80"></span>Mittelfristig</span>
+        <span><span class="swatch" style="background:#60a5fa"></span>Mittel- bis langfristig</span>
+        <span><span class="swatch" style="background:#a78bfa"></span>Langfristig</span>
+      </div>
+      <div class="scrollbox"><table id="outcomeTable"></table></div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Die 26 potenziellen PMO-Services</h2>
+    <p class="subtitle">Strategisch (7) · Taktisch (5) · Operativ (14) – jeweils mit applicable Domains (Project / Program / Portfolio).</p>
+    <div class="card scrollbox">
+      <table id="serviceTable"></table>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Kunden sprechen in Outcomes, nicht in Services</h2>
+    <p class="subtitle">Die zentrale Idee des Assessments: Erwartungen in Ergebnis-Sprache erheben, dann passende Services ableiten.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Die Arzt-Analogie</h3>
+        <p>Patient:innen erwarten, dass der Arzt ihre Schmerzen lindert – nicht, dass sie ein Medikament aus einer Liste wählen. „Ärz Relevante Frage“ ist: <i>Welches Ergebnis brauchen Sie?</i></p>
+        <p>Verschiedene „Schmerzen“ brauchen verschiedene „Medizin“: Fehlende strategische Anbindung → Portfolio-Management-Support; unzuverlässige Entscheidungsinformationen → integrierte Systeme und Status-Reports; mangelnde Motivation im Team → Training oder Mentoring.</p>
+      </div>
+      <div class="card">
+        <h3>Warum keine Service-Menü-Umfrage?</h3>
+        <p>Kunden eine Service-Liste vorzusetzen, ist methodisch falsch: Kunden sind keine PMO-Expert:innen und können nicht beurteilen, welcher Service ihren Bedarf deckt.</p>
+        <p><b>Stattdessen:</b> Jede:r Kunde wählt und priorisiert die <b>Outcomes</b>, die für sie/ihn am wichtigsten sind. Daraus ergibt sich z.&nbsp;B.: „Mehr skilled Ressourcen im Projektmanagement“ → „Training &amp; Kompetenzentwicklung“ leistet mehr als „Monitoring &amp; Controlling“.</p>
+      </div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Community Insights: Die CISES-Datenbank</h2>
+    <p class="subtitle">434 erfahrene PMO-Leader weltweit (PMOGA-Survey 2023/2024) bewerteten: „This PMO service will produce the desired outcome.“</p>
+    <div class="grid4">
+      <div class="card"><div class="kpi" style="font-size:1.5rem;">0</div><div class="kpi-label">Strongly Disagree</div></div>
+      <div class="card"><div class="kpi" style="font-size:1.5rem;">1</div><div class="kpi-label">Disagree</div></div>
+      <div class="card"><div class="kpi" style="font-size:1.5rem;">2</div><div class="kpi-label">Neutral</div></div>
+      <div class="card"><div class="kpi" style="font-size:1.5rem;">3–4</div><div class="kpi-label">Agree / Strongly Agree</div></div>
+    </div>
+    <div class="card">
+      <h3>CISES = Median der Antworten pro Service × Outcome (Likert-Skala 0–4)</h3>
+      <p>Neu gegenüber der alten PMOVR-Methodik (deprecated Sept. 2024): Likert-Skala statt Freitext und <b>Median statt Mittelwert</b> – robuster gegen Ausreißer. Die Heatmap unten zeigt die komplette 30 × 26 Matrix (fahren Sie mit der Maus darüber):</p>
+      <div class="legend">
+        <span><span class="swatch l0" style="background:#1e293b"></span>0</span>
+        <span><span class="swatch" style="background:#1d4ed8"></span>1</span>
+        <span><span class="swatch" style="background:#0891b2"></span>2</span>
+        <span><span class="swatch" style="background:#a21caf"></span>3</span>
+        <span><span class="swatch" style="background:#f472b6"></span>4</span>
+      </div>
+      <div class="heatmap-wrap scrollbox" style="max-height:42vh;"><table class="heatmap" id="cisesHeat"></table></div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Schritt 1: Erwartungen sammeln</h2>
+    <p class="subtitle">Tab „Collecting Expectations“: bis zu 5 Kundengruppen (A–E) mit je bis zu 5 Kunden. Jede:r Kunde rangiert seine Top-5-Outcomes.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Erhebung (z. B. JotForm / SurveyMonkey oder Interview)</h3>
+        <ul>
+          <li>Jede:r PMO-Kunde wählt <b>5 unterschiedliche Outcomes</b> und ordnet sie nach Wichtigkeit.</li>
+          <li>Bewertungsskala: <b>5 = höchste Priorität</b> … <b>1 = niedrigste Priorität</b>. Nicht gewählte Outcomes bleiben leer.</li>
+          <li>Beispieltabelle (Gruppe A, Kunde A1) aus der Datei: Rollen &amp; Verantwortlichkeiten = 5, Projekt-Priorisierung = 5, Kontrolle über Projektteams = 3 …</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Daraus entsteht pro Gruppe eine Outcome-Relevanz</h3>
+        <p>Summe der Prioritäten je Outcome ÷ Anzahl Kunden der Gruppe → <b>Outcome Relevance</b> (z.&nbsp;B. 5,49 bei „Bessere Rollen-Definition“, wenn alle 5 Kunden die 5 vergeben). Diese Werte fließen in den nächsten Schritt ein.</p>
+      </div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Schritt 2: Relevanz gewichten</h2>
+    <p class="subtitle">Tab „Defining Relevance“: Die Outcome-Relevanz jeder Kundengruppe wird mit dem <b>Impact der Gruppe auf den PMO-Erfolg</b> multipliziert.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Gruppen-Impact in % (frei wählbar, Summe = 100 %)</h3>
+        <p>Beispiel aus der Datei: Gruppe A = 100 %, Gruppen B–E = 0 % (Beispieldaten). In der Praxis z.&nbsp;B. Executives 60 % / Projektmanager:innen 40 %.</p>
+        <p><b>Tipp:</b> Das Analytical Hierarchy Process (AHP) liefert belastbare Prozentwerte durch paarweise Vergleiche der Gruppen.</p>
+      </div>
+      <div class="card">
+        <h3>Consolidated Outcome Relevance</h3>
+        <p>Formel: Σ (Relevanz<sub>Gruppe</sub> × Impact<sub>Gruppe</sub>). Ergebnis: ein gewichteter Relevanzwert pro Outcome – die Baseline, um später den Wert des PMO messbar zu machen und Services zu priorisieren.</p>
+      </div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Schritt 3: Service-Prioritäten (SOIS)</h2>
+    <p class="subtitle">Tab „Identifying Priorities“: SOIC = Consolidated Outcome Relevance × CISES – summiert pro Service ergibt das SOIS-Ranking (Beispieldaten aus der Datei, Gruppe A = 100 %).</p>
+    <div class="card">
+      <div class="legend">
+        <button class="btn ghost" id="sortAbs">Nach SOIS sortieren</button>
+        <button class="btn ghost" id="sortCat">Nach Kategorie gruppieren</button>
+        <span class="ctl">Klick auf einen Balken: Top-Beiträge der Outcomes</span>
+      </div>
+      <div class="scrollbox" style="max-height:58vh;"><div id="soisBars"></div></div>
+      <div id="soisDetail" class="footnote"></div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Live-Rechner: Eigene Outcome-Gewichtung → SOIS</h2>
+    <p class="subtitle">Stellen Sie die konsolidierte Outcome-Relevanz per Slider ein (Voreinstellung = Beispieldaten der Datei). Das SOIS-Ranking berechnet sich live: SOIS<sub>Service</sub> = Σ (Relevanz<sub>Outcome</sub> × CISES<sub>Service,Outcome</sub>).</p>
+    <div class="grid2">
+      <div class="card scrollbox" style="max-height:62vh;">
+        <div style="display:flex;gap:.5rem;margin-bottom:.8rem;">
+          <button class="btn" id="loadExample">Beispiel laden</button>
+          <button class="btn ghost" id="resetAll">Alle auf 0</button>
+          <button class="btn ghost" id="resetMax">Alle auf 5,49</button>
+        </div>
+        <div class="slider-grid" id="sliders"></div>
+      </div>
+      <div class="card scrollbox" style="max-height:62vh;">
+        <h3>SOIS-Ranking (live)</h3>
+        <div id="liveBars"></div>
+      </div>
+    </div>
+  </section>`);
+
+addSlide(`
+  <section class="slide">
+    <h2>Ergebnisse richtig einordnen</h2>
+    <p class="subtitle">Das Tool liefert datenbasierte Hinweise – keine automatische Entscheidung.</p>
+    <div class="card">
+      <ul>
+        <li>Services mit hohem SOIS-Anteil sind <b>potenziell prioritär</b> – aber die endgültige Portfolio-Entscheidung ist komplex.</li>
+        <li>Zu bedenken: Organisationskultur und Reifegrad, Implementierungsdauer und -aufwand, Ressourcenverfügbarkeit, Implementierungsrisiken, Passung zu Strategie und Geschäftsmodell.</li>
+        <li>Die Ergebnisse sind Community-Insights, die die tatsächlichen Bedürfnisse Ihrer PMO-Kunden adressieren können – sie ersetzen nicht Ihre maßgeschneiderten Lösungen.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Rechtliches (aus der Originaldatei)</h3>
+      <p class="footnote">Alle Rechte am Assessment und seinen Inhalten liegen exklusiv beim Project Management Institute (PMI). Unerlaubte Vervielfältigung, Verbreitung oder Veränderung ist untersagt; Nutzung nur mit korrekter Quellenangabe. Ergebnisse basieren auf Community-Modellen und stellen keine Beratungsleistung dar. PMI behält sich Änderungen vor.</p>
+      <p class="footnote">Community: community.pmoga.world · Framework: PMI PMO Practice Guide (PMO Value Ring Framework, Value Generating PMO Flywheel Steps 2 &amp; 3) · Tool-Version 1.03, 3. Nov 2024</p>
+    </div>
+  </section>`);
+
+slidesEl.innerHTML = slideDefs.map((h, i) => h.replace('<section class="slide', `<section data-i="${i}" class="slide`).replace('class="slide active"', 'class="slide active"')).join('');
+
+function show(i) {
+  idx = Math.max(0, Math.min(slideDefs.length - 1, i));
+  document.querySelectorAll('.slide').forEach((s, n) => s.classList.toggle('active', n === idx));
+  $('#counter').textContent = `${idx + 1} / ${slideDefs.length}`;
+  const active = document.querySelector('.slide.active');
+  if (active) active.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+$('#next').onclick = () => show(idx + 1);
+$('#prev').onclick = () => show(idx - 1);
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(idx + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(idx - 1); }
+  if (e.key === 'Home') show(0);
+  if (e.key === 'End') show(slideDefs.length - 1);
+});
+document.addEventListener('click', e => {
+  if (e.target.closest('#nav') || e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+  if (e.clientX > window.innerWidth * 0.55) show(idx + 1); else show(idx - 1);
+});
+
+const tooltip = $('#tooltip');
+function bindTip(el, html) {
+  el.addEventListener('mouseenter', () => { tooltip.innerHTML = html; tooltip.style.display = 'block'; });
+  el.addEventListener('mousemove', e => {
+    const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + tooltip.offsetWidth > window.innerWidth - 8) x = e.clientX - tooltip.offsetWidth - pad;
+    if (y + tooltip.offsetHeight > window.innerHeight - 8) y = e.clientY - tooltip.offsetHeight - pad;
+    tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+  });
+  el.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+}
+
+const horizonColor = h => ({ 'short term': '#f87171', 'short to medium term': '#fbbf24', 'medium term': '#4ade80', 'medium to long term': '#60a5fa', 'long term': '#a78bfa' }[h] || '#8b9cb3');
+
+$('#outcomeTable').innerHTML =
+  '<tr><th>#</th><th>Outcome</th><th>Beschreibung</th><th>Wahrnehmungs-Horizont</th></tr>' +
+  outcomes.map((o, i) => `<tr>
+    <td class="tag">${i + 1}</td>
+    <td style="font-weight:600;min-width:220px;">${esc(o.name)}</td>
+    <td style="color:var(--muted);">${esc(o.desc)}</td>
+    <td><span class="pill" style="background:${horizonColor(o.horizon)}22;color:${horizonColor(o.horizon)}">${HORIZON_LABEL[o.horizon] || o.horizon}</span></td>
+  </tr>`).join('');
+
+$('#serviceTable').innerHTML =
+  '<tr><th>#</th><th>Service</th><th>Kategorie</th><th>Domains</th><th>Beschreibung</th></tr>' +
+  services.map((s, i) => `<tr>
+    <td class="tag">${i + 1}</td>
+    <td style="font-weight:600;min-width:200px;">${esc(s.name)}</td>
+    <td>${pillFor(s.cat)}</td>
+    <td class="tag" style="white-space:nowrap;">${esc(s.domain)}</td>
+    <td style="color:var(--muted);">${esc(s.desc)}</td>
+  </tr>`).join('');
+
+(function buildCisesHeat() {
+  const shortNames = services.map((s, i) => `${i + 1}. ${s.name.length > 18 ? s.name.slice(0, 17) + '…' : s.name}`);
+  let html = '<tr><th class="rowh">Outcome \\ Service</th>' + shortNames.map(n => `<th title="${esc(n)}">${esc(n.split('.')[0])}</th>`).join('') + '</tr>';
+  outcomes.forEach((o, oi) => {
+    html += `<tr><th class="rowh" title="${esc(o.name)}">${oi + 1}. ${esc(o.name)}</th>` +
+      cises[oi].map((v, si) => `<td class="l${v}" data-v="${v}">${v}</td>`).join('') + '</tr>';
+  });
+  const t = $('#cisesHeat');
+  t.innerHTML = html;
+  t.querySelectorAll('td').forEach(td => {
+    const oi = td.parentElement.rowIndex - 1, si = td.cellIndex - 1;
+    bindTip(td, `<b>${esc(services[si].name)}</b> → <b>${esc(outcomes[oi].name)}</b><br>CISES = ${td.dataset.v} (0 = strongly disagree … 4 = strongly agree)`);
+  });
+})();
+
+function renderSoisBars(container, order, relevance, onClick) {
+  const total = order.reduce((a, si) => a + relevance.reduce((s, r, oi) => s + r * cises[oi][si], 0), 0) || 1;
+  const max = Math.max(...order.map(si => relevance.reduce((s, r, oi) => s + r * cises[oi][si], 0)), 1);
+  container.innerHTML = order.map(si => {
+    const abs = relevance.reduce((s, r, oi) => s + r * cises[oi][si], 0);
+    const rel = abs / total * 100;
+    return `<div class="bar-row" data-si="${si}">
+      <div class="bar-label" title="${esc(services[si].name)}">${pillFor(services[si].cat)} ${si + 1}. ${esc(services[si].name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(abs / max * 100).toFixed(2)}%"></div></div>
+      <div class="bar-val">${abs.toFixed(1)} · ${rel.toFixed(1)} %</div>
+    </div>`;
+  }).join('');
+  container.querySelectorAll('.bar-row').forEach(row => {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => onClick && onClick(parseInt(row.dataset.si)));
+    bindTip(row.querySelector('.bar-label'), `<b>${esc(services[parseInt(row.dataset.si)].name)}</b><br>${esc(services[parseInt(row.dataset.si)].desc)}<br><span class="tag">${esc(services[parseInt(row.dataset.si)].domain)}</span>`);
+  });
+}
+
+function showSoisDetail(si) {
+  const rel = example.relevance;
+  const contribs = outcomes.map((o, oi) => ({ o, oi, c: rel[oi] * cises[oi][si] })).filter(x => x.c > 0.001).sort((a, b) => b.c - a.c).slice(0, 8);
+  $('#soisDetail').innerHTML = `<b>Top-Beiträge zu „${esc(services[si].name)}“ (SOIS ${example.sois[si].toFixed(1)}):</b> ` +
+    contribs.map(x => `${esc(x.o.name)} (${x.c.toFixed(1)})`).join(' · ');
+}
+
+(function initSois() {
+  const all = services.map((_, i) => i);
+  renderSoisBars($('#soisBars'), all.slice().sort((a, b) => example.sois[b] - example.sois[a]), example.relevance, showSoisDetail);
+  $('#sortAbs').onclick = () => renderSoisBars($('#soisBars'), all.slice().sort((a, b) => example.sois[b] - example.sois[a]), example.relevance, showSoisDetail);
+  $('#sortCat').onclick = () => {
+    const order = { 'Strategisch': 0, 'Taktisch': 1, 'Operativ': 2 };
+    renderSoisBars($('#soisBars'), all.slice().sort((a, b) => (order[services[a].cat] - order[services[b].cat]) || (example.sois[b] - example.sois[a])), example.relevance, showSoisDetail);
+  };
+})();
+
+(function initLive() {
+  const rel = example.relevance.slice();
+  const sliders = $('#sliders');
+  sliders.innerHTML = outcomes.map((o, oi) => `
+    <div class="slider-item">
+      <div class="top"><span>${oi + 1}. ${esc(o.name)}</span><span class="val" id="val${oi}">${rel[oi].toFixed(2)}</span></div>
+      <input type="range" min="0" max="5.5" step="0.01" value="${rel[oi]}" id="sl${oi}">
+    </div>`).join('');
+  function recalc() {
+    for (let oi = 0; oi < 30; oi++) {
+      rel[oi] = parseFloat($('#sl' + oi).value);
+      $('#val' + oi).textContent = rel[oi].toFixed(2);
+    }
+    renderSoisBars($('#liveBars'), services.map((_, i) => i).sort((a, b) =>
+      rel.reduce((s, r, o) => s + r * cises[o][b], 0) - rel.reduce((s, r, o) => s + r * cises[o][a], 0)
+    ), rel, null);
+  }
+  for (let oi = 0; oi < 30; oi++) $('#sl' + oi).addEventListener('input', recalc);
+  $('#loadExample').onclick = () => { for (let oi = 0; oi < 30; oi++) { $('#sl' + oi).value = example.relevance[oi]; } recalc(); };
+  $('#resetAll').onclick = () => { for (let oi = 0; oi < 30; oi++) { $('#sl' + oi).value = 0; } recalc(); };
+  $('#resetMax').onclick = () => { for (let oi = 0; oi < 30; oi++) { $('#sl' + oi).value = 5.4945; } recalc(); };
+  recalc();
+})();
+
+show(0);
+</script>
+</body>
+</html>
